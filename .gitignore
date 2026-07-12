@@ -1,0 +1,6 @@
+phoneclub.env
+.DS_Store
+.venv/
+__pycache__/
+*.cfg
+.claude/settings.local.json

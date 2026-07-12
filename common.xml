@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ================================================================= -->
+<!-- VOIP PHONE CLUB  -  COMMON CONFIG  (shared by ALL H2U-V2 phones)  -->
+<!-- Host this as the Common configuration on the provisioning server. -->
+<!-- Contains NO secrets, so encryption is optional.                   -->
+<!--                                                                   -->
+<!-- Edits vs a member's known-good export:                                   -->
+<!--   * AllowIPCall 1 -> 0  (children cannot dial raw IP addresses)   -->
+<!--   * Dial plan ^1[0-9][0-9]$ -> ^[12][0-9][0-9]$ (covers ext 200)  -->
+<!--   * DND window 1500-1730 -> 2100-0800 (quiet hours 21:00-08:00)   -->
+<!--   * Added <sip> UseVPN=0, <phone><date> UTC+1 + SNTP, EnableVPN=0 -->
+<!--     (export had UTC+8, so DND fired at the wrong wall-clock time; -->
+<!--      TimeZone 4 = UTC+1 inferred from 32 = UTC+8, i.e. quarter-   -->
+<!--      hour steps - VERIFY the clock on one handset after pushing)  -->
+<!-- Everything else is that export's call behaviour, unchanged.   -->
+<!-- ================================================================= -->
+<sysConf>
+    <Version>2.0000000000</Version>
+    <sip>
+        <line index="1">
+            <UseVPN>0</UseVPN>
+        </line>
+        <line index="2">
+            <UseVPN>0</UseVPN>
+        </line>
+    </sip>
+    <call>
+        <port index="1">
+            <EnableXferDPlan>1</EnableXferDPlan>
+            <EnableFwdDPlan>0</EnableFwdDPlan>
+            <EnablePreDPlan>0</EnablePreDPlan>
+            <IPDialPrefix>.</IPDialPrefix>
+            <EnableDND>1</EnableDND>
+            <DNDMode>0</DNDMode>
+            <EnableSpaceDND>0</EnableSpaceDND>
+            <DNDStartTime>2100</DNDStartTime>
+            <DNDEndTime>0800</DNDEndTime>
+            <DNDAcceptMcast>0</DNDAcceptMcast>
+            <EnableCallBar>1</EnableCallBar>
+            <EnableAllowedlist>1</EnableAllowedlist>
+            <EnableBlockedlist>1</EnableBlockedlist>
+            <MuteRinging>0</MuteRinging>
+            <BanDialOut>0</BanDialOut>
+            <BanDialOutToneMode>1</BanDialOutToneMode>
+            <BanDialOutTone></BanDialOutTone>
+            <BanEmptyCID>0</BanEmptyCID>
+            <EnableCLIP>1</EnableCLIP>
+            <CallWaiting>0</CallWaiting>
+            <CallTransfer>1</CallTransfer>
+            <CallSemiXfer>1</CallSemiXfer>
+            <CallConference>0</CallConference>
+            <AutoPickupNext>0</AutoPickupNext>
+            <BusyNoLine>1</BusyNoLine>
+            <AutoOnhook>1</AutoOnhook>
+            <AutoOnhookTime>3</AutoOnhookTime>
+            <EnableIntercom>0</EnableIntercom>
+            <IntercomMute>0</IntercomMute>
+            <IntercomTone>0</IntercomTone>
+            <IntercomBarge>0</IntercomBarge>
+            <UseAutoRedial>0</UseAutoRedial>
+            <RedialEnterCallLog>0</RedialEnterCallLog>
+            <AutoRedialDelay>30</AutoRedialDelay>
+            <AutoRedialTimes>5</AutoRedialTimes>
+            <CallComplete>0</CallComplete>
+            <CHoldingTone>1</CHoldingTone>
+            <CWaitingTone>1</CWaitingTone>
+            <HideDTMFType>0</HideDTMFType>
+            <VideoDisplayMode>0</VideoDisplayMode>
+            <TalkDTMFTone>1</TalkDTMFTone>
+            <DialDTMFTone>1</DialDTMFTone>
+            <PswDialMode>0</PswDialMode>
+            <PswDialLength>0</PswDialLength>
+            <PswDialPrefix></PswDialPrefix>
+            <EnableMultiLine>1</EnableMultiLine>
+            <AllowIPCall>0</AllowIPCall>
+            <CallerNameType>0</CallerNameType>
+            <MuteForRing>0</MuteForRing>
+            <AutoHandleVideo>0</AutoHandleVideo>
+            <DefaultAnsMode>1</DefaultAnsMode>
+            <DefaultDialMode>1</DefaultDialMode>
+            <HoldToTransfer>0</HoldToTransfer>
+            <EnablePreDial>0</EnablePreDial>
+            <DefaultExtLine>1</DefaultExtLine>
+            <EnableDefLine>1</EnableDefLine>
+            <EnableSelLine>1</EnableSelLine>
+            <RinginHeadset>0</RinginHeadset>
+            <AutoHeadset>0</AutoHeadset>
+            <DNDReturnCode>480</DNDReturnCode>
+            <BusyReturnCode>486</BusyReturnCode>
+            <RejectReturnCode>603</RejectReturnCode>
+            <ContactType>0</ContactType>
+            <EnableCountryCode>0</EnableCountryCode>
+            <CountryCode></CountryCode>
+            <CallAreaCode></CallAreaCode>
+            <NumberPrivacy>0</NumberPrivacy>
+            <PrivacyRule></PrivacyRule>
+            <TransfDTMFCode></TransfDTMFCode>
+            <HoldDTMFCode></HoldDTMFCode>
+            <ConfDTMFCode></ConfDTMFCode>
+            <DisableDialSearch>0</DisableDialSearch>
+            <CallNumberFilter></CallNumberFilter>
+            <AutoResumeCurrent>0</AutoResumeCurrent>
+            <CallTimeout>120</CallTimeout>
+            <RingTimeout>120</RingTimeout>
+            <RingPriority>1</RingPriority>
+            <AutoAnswerTone>1</AutoAnswerTone>
+            <AlertingTone>1</AlertingTone>
+            <BusyTone>1</BusyTone>
+            <AlertInfoUrlEnable>1</AlertInfoUrlEnable>
+            <AlertInfoTextEnable>1</AlertInfoTextEnable>
+            <AlertInfoKeywordsEnable>1</AlertInfoKeywordsEnable>
+            <DisableSpeakerMode>0</DisableSpeakerMode>
+        </port>
+        <basic>
+            <DialbyPound>0</DialbyPound>
+            <BTransferbyPound>0</BTransferbyPound>
+            <OnhooktoBXfer>0</OnhooktoBXfer>
+            <OnhooktoAXfer>0</OnhooktoAXfer>
+            <ConfOnhooktoXfer>0</ConfOnhooktoXfer>
+            <DialFixedLength>1</DialFixedLength>
+            <FixedLengthNums>3</FixedLengthNums>
+            <DialbyTimeout>1</DialbyTimeout>
+            <DialTimeoutvalue>5</DialTimeoutvalue>
+            <EnableEOneSixFour>0</EnableEOneSixFour>
+        </basic>
+        <dialplan index="1">
+            <Number>^[12][0-9][0-9]$</Number>
+            <ApplyToCall>0</ApplyToCall>
+            <MatchToSend>1</MatchToSend>
+            <Media>0</Media>
+            <Line>1</Line>
+            <Address></Address>
+            <Port>0</Port>
+            <Alias></Alias>
+            <DelLen>0</DelLen>
+            <Suffix></Suffix>
+        </dialplan>
+        <alertInfo index="1">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="2">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="3">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="4">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="5">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="6">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="7">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="8">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="9">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+        <alertInfo index="10">
+            <Text></Text>
+            <Line>-1</Line>
+            <RingType>1.wav</RingType>
+        </alertInfo>
+    </call>
+    <phone>
+        <date>
+            <EnableSNTP>1</EnableSNTP>
+            <SNTPServer>0.pool.ntp.org</SNTPServer>
+            <SecondSNTPServer>time.nist.gov</SecondSNTPServer>
+            <TimeZone>4</TimeZone>
+            <TimeZoneName>UTC+1</TimeZoneName>
+        </date>
+    </phone>
+    <vpn>
+        <EnableVPN>0</EnableVPN>
+    </vpn>
+</sysConf>
