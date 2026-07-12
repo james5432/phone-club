@@ -49,10 +49,12 @@ For each member the system stores exactly three things:
 | Extension number | VoIP.ms | the number friends dial |
 | Phone's MAC address | Cloudflare R2 | so the handset fetches its own config |
 
-No surnames, no addresses, no call recordings. Call metadata (who called whom,
-when) exists at the VoIP provider as with any phone service. One admin holds
-the credentials; nobody else has access. When a family leaves the club, their
-sub-account is retired and their handset config removed by hand.
+No surnames, no addresses, no call recordings. Call metadata is retained by
+the VoIP provider as with any phone service: per-call records of caller,
+callee, time, duration, and technical details including the handset's IP
+address. One admin — and nobody else — has access to the VoIP.ms account,
+which is protected by two-factor authentication. When a family leaves the
+club, their sub-account is retired and their handset config removed by hand.
 
 ## How it works
 
@@ -107,12 +109,17 @@ details live there — not in this repository and not on the phone network.
 - *Your rights*: any parent can ask the admin exactly what is stored about
   their child, and have it deleted. When a family leaves, the sub-account and
   handset config are removed.
-- *Call metadata* (who called whom, when) is retained by the VoIP provider as
-  with any telephone service. No call content is or can be recorded by the club.
+- *Call metadata* is retained by the VoIP provider as with any telephone
+  service: per-call records of caller, callee, time, duration, and technical
+  details including the handset's IP address (visible to the admin in the
+  portal under Call Detail Records). No call content is or can be recorded
+  by the club.
 
 **Trust model & auditing.** The club is run by one admin, who holds the
 provider credentials — that is the honest trust boundary, and we prefer
-stating it to hiding it. The guardrails around it:
+stating it to hiding it. Only that admin has access to the VoIP.ms account,
+and the account is protected with two-factor authentication. The guardrails
+around it:
 
 - The provisioning tooling is public and **add-only**: it is incapable of
   deleting or overwriting anything, so scripted mistakes can't take the
