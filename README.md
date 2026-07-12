@@ -57,7 +57,7 @@ sub-account is retired and their handset config removed by hand.
 ## How it works
 
 ```
-sign-up ──> add_member.py / gui.py ──> VoIP.ms sub-account   (identity + dial permissions)
+sign-up (Baseflow) ──> add_member.py / gui.py ──> VoIP.ms sub-account   (identity + dial permissions)
                        │
                        └────────────> Cloudflare R2 + Worker (phone config, HTTP Basic Auth)
                                             │
@@ -75,6 +75,57 @@ sign-up ──> add_member.py / gui.py ──> VoIP.ms sub-account   (identity +
 - [`gui.py`](gui.py) is a localhost web front-end for the same code, with a
   dry-run-first workflow: the real Provision button stays locked until a
   dry run of the exact same details has passed.
+
+## Security & privacy
+
+**Transport security.** Provisioning traffic (handset ↔ config server) runs
+over HTTPS with club credentials, so SIP passwords never cross the internet
+in the clear. The calls themselves, however, use plain SIP/RTP **without
+encryption** — like classic telephony, call audio between a handset and the
+VoIP server is in principle readable by operators of the network path. We
+state this openly rather than imply otherwise; for this threat model
+(children calling club friends) we judged it acceptable, and SIP-TLS/SRTP
+hardening is on the wish list.
+
+**Passwords.** Each phone gets its own randomly generated 95-bit SIP password
+(see `make_password()` in [`add_member.py`](add_member.py)). It exists in
+exactly two places — the VoIP provider and that phone's own config file — and
+the tooling never prints, logs, or displays it.
+
+**Sign-ups and membership administration** are powered by Baseflow, a Dutch
+tool with Germany-based servers, chosen for GDPR compliance. Parents' contact
+details live there — not in this repository and not on the phone network.
+
+**AVG/GDPR.**
+
+- *Legal basis*: a parent signs up their own child — consent is explicit and
+  given at sign-up, and can be withdrawn by leaving the club.
+- *Data minimization*: the phone network itself stores only the three items
+  in the table above.
+- *Processors*: VoIP.ms (Canadian provider; our account uses an EU-located
+  server), Cloudflare (config hosting), Baseflow (membership, German servers).
+- *Your rights*: any parent can ask the admin exactly what is stored about
+  their child, and have it deleted. When a family leaves, the sub-account and
+  handset config are removed.
+- *Call metadata* (who called whom, when) is retained by the VoIP provider as
+  with any telephone service. No call content is or can be recorded by the club.
+
+**Trust model & auditing.** The club is run by one admin, who holds the
+provider credentials — that is the honest trust boundary, and we prefer
+stating it to hiding it. The guardrails around it:
+
+- The provisioning tooling is public and **add-only**: it is incapable of
+  deleting or overwriting anything, so scripted mistakes can't take the
+  network down or hijack an existing phone.
+- Every configuration and tooling change is visible in this repository's
+  public git history.
+- Destructive actions (retiring a member) are deliberately manual, done by
+  hand in the provider portals.
+- There is currently **no tamper-proof log of admin actions** — call detail
+  records exist at the VoIP provider, but portal actions are logged only by
+  the providers themselves. A public provisioning log (append-only through
+  git history) is a planned improvement; security-minded parents are warmly
+  invited to review this repo and suggest more.
 
 ## Verifying our claims
 
