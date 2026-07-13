@@ -215,7 +215,7 @@ PAGE = r"""<!doctype html>
   header { background:#1e293b; color:#fff; padding:14px 22px; font-size:18px; font-weight:600; }
   header small { font-weight:400; color:#94a3b8; margin-left:10px; }
   main { max-width:840px; margin:22px auto 60px; padding:0 16px; display:grid; gap:16px; }
-  .card { background:#fff; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .card { background:#fff; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow-x:auto; }
   .card h2 { margin:0 0 12px; font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   .chips { display:flex; gap:8px; flex-wrap:wrap; }
   .chip { padding:4px 12px; border-radius:999px; font-size:13px; font-weight:600; }
@@ -234,9 +234,10 @@ PAGE = r"""<!doctype html>
   #golive ol { margin:0 0 12px 18px; padding:0; font-size:14px; line-height:1.7; }
   #announce { width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #c7d2fe; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; min-height:52px; }
   #copyBtn { margin-top:8px; }
-  form { display:grid; grid-template-columns:1fr 1fr 120px; gap:12px; }
-  label { display:grid; gap:4px; font-size:13px; font-weight:600; color:#374151; }
-  input { padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; }
+  form { display:grid; grid-template-columns:2fr 2fr 1fr; gap:12px; }
+  label { display:grid; gap:4px; font-size:13px; font-weight:600; color:#374151; min-width:0; }
+  input { padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; width:100%; min-width:0; }
+  @media (max-width:700px) { form { grid-template-columns:1fr; } }
   input:focus { outline:2px solid var(--accent); border-color:transparent; }
   .buttons { grid-column:1/-1; display:flex; gap:10px; align-items:center; }
   button.action { padding:10px 18px; border-radius:8px; border:none; font-size:15px; font-weight:600; cursor:pointer; }
