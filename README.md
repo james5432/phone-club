@@ -59,7 +59,7 @@ club, their sub-account is retired and their handset config removed by hand.
 ## How it works
 
 ```
-sign-up (Baseflow) ──> add_member.py / gui.py ──> VoIP.ms sub-account   (identity + dial permissions)
+sign-up (Baserow) ──> add_member.py / gui.py ──> VoIP.ms sub-account   (identity + dial permissions)
                        │
                        └────────────> Cloudflare R2 + Worker (phone config, HTTP Basic Auth)
                                             │
@@ -94,9 +94,11 @@ hardening is on the wish list.
 exactly two places — the VoIP provider and that phone's own config file — and
 the tooling never prints, logs, or displays it.
 
-**Sign-ups and membership administration** are powered by Baseflow, a Dutch
-tool with Germany-based servers, chosen for GDPR compliance. Parents' contact
-details live there — not in this repository and not on the phone network.
+**Sign-ups and membership administration** are powered by
+[Baserow](https://baserow.io), a Dutch tool whose cloud infrastructure is
+hosted in Germany, within the EU — chosen for GDPR compliance. Parents'
+contact details live there — not in this repository and not on the phone
+network.
 
 **AVG/GDPR.**
 
@@ -105,7 +107,7 @@ details live there — not in this repository and not on the phone network.
 - *Data minimization*: the phone network itself stores only the three items
   in the table above.
 - *Processors*: VoIP.ms (Canadian provider; our account uses an EU-located
-  server), Cloudflare (config hosting), Baseflow (membership, German servers).
+  server), Cloudflare (config hosting), Baserow (membership, German servers).
 - *Your rights*: any parent can ask the admin exactly what is stored about
   their child, and have it deleted. When a family leaves, the sub-account and
   handset config are removed.
@@ -163,3 +165,11 @@ The tooling is generic — any group could run their own club:
 ## License
 
 [MIT](LICENSE). Use it for your own village.
+
+---
+
+**Babbel en Bel Club** — een kleinschalig community-project beheerd door een
+ouder uit Austerlitz.
+
+[neem contact op met de beheerder](mailto:babbelenbel@gmail.com) ·
+[privacybeleid](https://docs.google.com/document/d/1TRrpMPhnbv9TUyjCaIjnKierF3-NXXew8WhN52PkazE/edit)
