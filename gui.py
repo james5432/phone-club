@@ -31,7 +31,7 @@ PORT = 8765
 app = Flask(__name__)
 
 state_lock = threading.Lock()
-job = {"status": "idle", "log": []}   # one provisioning job at a time
+job = {"status": "idle", "log": [], "details": None}   # one job at a time
 armed = None                          # details of the last successful dry run
 
 
@@ -186,13 +186,15 @@ def api_provision():
         details, armed = armed, None
         job["status"] = "running"
         job["log"] = []
+        job["details"] = {"name": details["name"], "ext": details["ext"],
+                          "mac": details["mac"]}
     threading.Thread(target=run_provision, args=(details,), daemon=True).start()
     return jsonify(ok=True)
 
 
 @app.get("/api/job")
 def api_job():
-    return jsonify(status=job["status"], log=job["log"])
+    return jsonify(status=job["status"], log=job["log"], details=job["details"])
 
 
 @app.get("/")
@@ -222,9 +224,16 @@ PAGE = r"""<!doctype html>
   table { width:100%; border-collapse:collapse; font-size:14px; }
   th { text-align:left; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid #e5e7eb; }
   td { padding:7px 8px; border-bottom:1px solid #f1f5f9; }
-  .regbtn { font-size:12px; padding:2px 10px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; }
   .reg-yes { color:var(--ok); font-weight:700; }
   .reg-no  { color:var(--bad); font-weight:700; }
+  .reg-wait { color:var(--muted); }
+  .cardhead { display:flex; justify-content:space-between; align-items:baseline; }
+  .linkbtn { font-size:12px; padding:3px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:#374151; }
+  #golive { display:none; margin-top:14px; padding:14px 16px; border-radius:8px; background:#eef2ff; border:1px solid #c7d2fe; }
+  #golive h3 { margin:0 0 8px; font-size:14px; }
+  #golive ol { margin:0 0 12px 18px; padding:0; font-size:14px; line-height:1.7; }
+  #announce { width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #c7d2fe; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; min-height:52px; }
+  #copyBtn { margin-top:8px; }
   form { display:grid; grid-template-columns:1fr 1fr 120px; gap:12px; }
   label { display:grid; gap:4px; font-size:13px; font-weight:600; color:#374151; }
   input { padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; }
@@ -251,9 +260,12 @@ PAGE = r"""<!doctype html>
   </div>
 
   <div class="card">
-    <h2>Current members</h2>
+    <div class="cardhead">
+      <h2>Current members</h2>
+      <button class="linkbtn" id="recheck">&#8635; check again</button>
+    </div>
     <table id="members"><thead>
-      <tr><th>Sub-account</th><th>Ext</th><th>Description</th><th>Registered</th></tr>
+      <tr><th>Sub-account</th><th>Ext</th><th>Description</th><th>Online</th></tr>
     </thead><tbody></tbody></table>
     <p class="hint" id="membersHint"></p>
   </div>
@@ -278,6 +290,18 @@ PAGE = r"""<!doctype html>
     </form>
     <div id="result"></div>
     <div id="log"></div>
+    <div id="golive">
+      <h3>&#127881; Next steps</h3>
+      <ol>
+        <li>Deliver the phone and test it at the member's home (call someone!)</li>
+        <li>Announce on the Signal channel &mdash; message below, edit as you like</li>
+        <li>Add the extension to the directory (until that's automated)</li>
+      </ol>
+      <textarea id="announce" rows="2"></textarea>
+      <br>
+      <button class="linkbtn" id="copyBtn">&#128203; Copy message</button>
+      <span class="hint" id="copyHint"></span>
+    </div>
   </div>
 
 </main>
@@ -304,8 +328,9 @@ async function loadState() {
   const tb = $('members').querySelector('tbody');
   tb.innerHTML = s.members.map(m =>
     `<tr><td>${m.account}</td><td>${m.extension || '-'}</td><td>${m.description}</td>
-     <td><button class="regbtn" onclick="checkReg(this, '${m.account}')">check</button></td></tr>`
+     <td class="regcell" data-account="${m.account}"><span class="reg-wait">&hellip;</span></td></tr>`
   ).join('');
+  sweepRegistration();
   $('membersHint').textContent = s.error ? s.error :
     (s.next_ext ? `Next free extension: ${s.next_ext}` : '');
   if (s.next_ext) $('ext').placeholder = `auto (${s.next_ext})`;
@@ -316,13 +341,41 @@ async function loadState() {
   if (s.job_status === 'running') pollJob();
 }
 
-async function checkReg(btn, account) {
-  btn.textContent = '...';
-  const r = await (await fetch('/api/registration?account=' + encodeURIComponent(account))).json();
-  btn.outerHTML = r.ok
-    ? (r.registered ? '<span class="reg-yes">yes</span>' : '<span class="reg-no">no</span>')
-    : '<span class="hint">error</span>';
+async function sweepRegistration() {
+  const cells = [...document.querySelectorAll('.regcell')];
+  await Promise.all(cells.map(async cell => {
+    cell.innerHTML = '<span class="reg-wait">&hellip;</span>';
+    try {
+      const r = await (await fetch('/api/registration?account=' +
+        encodeURIComponent(cell.dataset.account))).json();
+      cell.innerHTML = r.ok
+        ? (r.registered ? '<span class="reg-yes">&#9679; online</span>'
+                        : '<span class="reg-no">&#9679; offline</span>')
+        : '<span class="hint">error</span>';
+    } catch {
+      cell.innerHTML = '<span class="hint">error</span>';
+    }
+  }));
 }
+$('recheck').addEventListener('click', sweepRegistration);
+
+function showGoLive(details) {
+  if (!details) return;
+  $('announce').value =
+    `${details.name}'s phone is now live! You can call them on ${details.ext}. \u{1F4DE}`;
+  $('golive').style.display = 'block';
+}
+$('copyBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('announce').value);
+    $('copyHint').textContent = 'copied!';
+  } catch {
+    $('announce').select();
+    document.execCommand('copy');
+    $('copyHint').textContent = 'copied!';
+  }
+  setTimeout(() => $('copyHint').textContent = '', 2000);
+});
 
 $('dryrunBtn').addEventListener('click', async () => {
   disarm();
@@ -351,6 +404,7 @@ $('provisionBtn').addEventListener('click', async () => {
   $('provisionBtn').disabled = true;
   $('dryrunBtn').disabled = true;
   $('result').style.display = 'none';
+  $('golive').style.display = 'none';
   const r = await (await fetch('/api/provision', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({token})
@@ -372,6 +426,7 @@ function pollJob() {
       $('dryrunBtn').disabled = false;
       $('armHint').textContent = j.status === 'registered'
         ? 'Done - phone is live.' : 'Job finished - see log.';
+      if (j.status === 'registered' || j.status === 'uploaded_only') showGoLive(j.details);
       loadState();
     }
   }, 2000);
