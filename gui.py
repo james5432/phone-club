@@ -78,7 +78,14 @@ def api_state():
         except SystemExit as e:
             out["error"] = str(e)          # e.g. extension pool exhausted
         except Exception as e:
-            out["error"] = f"VoIP.ms unreachable ({type(e).__name__})"
+            msg = str(e) or type(e).__name__
+            if "ip_not_enabled" in msg:
+                msg += (" — this machine's IP isn't whitelisted: update it at "
+                        "voip.ms → Main Menu → SOAP and REST/JSON API")
+            elif "invalid_credentials" in msg:
+                msg += (" — check VOIPMS_API_USER / VOIPMS_API_PASS in "
+                        "phoneclub.env (API password, not portal password)")
+            out["error"] = msg
     return jsonify(out)
 
 

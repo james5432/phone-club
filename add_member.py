@@ -76,7 +76,13 @@ def voipms(method, **params):
     # NOTE: must be GET - the VoIP.ms REST endpoint returns HTTP 500 for
     # form-POST bodies (verified 2026-07). Credentials ride the query string;
     # TLS covers them in transit.
-    resp = requests.get(VOIPMS_API_URL, params=query, timeout=30)
+    try:
+        resp = requests.get(VOIPMS_API_URL, params=query, timeout=30)
+    except requests.exceptions.RequestException as e:
+        # sanitize: requests exceptions can embed the full request URL,
+        # query-string credentials included
+        raise RuntimeError(f"VoIP.ms {method}: {type(e).__name__} "
+                           f"(network problem)") from None
     if resp.status_code != 200:
         # not raise_for_status(): its message embeds the full request URL,
         # query-string credentials included
