@@ -152,8 +152,10 @@ The tooling is generic — any group could run their own club:
 1. A VoIP.ms account (or adapt `voipms()` for another provider with
    sub-accounts and internal extensions), a Cloudflare account with an R2
    bucket, and a Basic-Auth Worker in front of it for provisioning.
-2. Fanvil H2U-V2 handsets (or adjust the config for your model). Set
-   "Update Mode" to "Update at Time Interval" on each phone once.
+2. Fanvil H2U-V2 handsets (or adjust the config for your model). For each
+   new phone, render the seed config (`make_bootstrap.py`) and import it
+   once via the phone's web UI — it sets the provisioning server, its
+   credentials, and the update mode in one step.
 3. `cp phoneclub.env.example phoneclub.env`, fill it in, `chmod 600` it.
 4. `python3 -m venv .venv && .venv/bin/pip install requests boto3 flask`
 5. Export a working phone's config, build `phone.cfg.template` from it

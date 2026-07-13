@@ -32,8 +32,12 @@ Never read, print, commit, or paste these values.
 2. Make sure `phone.cfg.template` exists — built from a known-good exported `.cfg`
    with the five per-phone values replaced by `{{SIP_USER}}`, `{{SIP_PASS}}`,
    `{{SIP_SERVER}}`, `{{EXTENSION}}`, `{{MAC}}`.
-3. Dry run first: `python add_member.py --name <Name> --mac <MAC> --dry-run`.
-4. Only after a clean dry run, run it for real (drop `--dry-run`).
+3. Factory-fresh phone? Render the seed config once (`python make_bootstrap.py`,
+   needs PROV_* env vars) and import `bootstrap.cfg` via the phone's web UI
+   (System → Configuration → Import), then reboot it. This sets the
+   provisioning server, Basic Auth, and Update Mode in one go.
+4. Dry run first: `python add_member.py --name <Name> --mac <MAC> --dry-run`.
+5. Only after a clean dry run, run it for real (drop `--dry-run`).
 
 ## Rules — do NOT
 
@@ -55,6 +59,11 @@ Never read, print, commit, or paste these values.
   http://127.0.0.1:8765). Provision button only arms after a clean dry run
   of the same details; never shows SIP passwords; needs `pip install flask`.
 - `phone.cfg.template` — per-MAC template with the `{{...}}` tokens above.
+- `bootstrap.cfg.template` + `make_bootstrap.py` — render `bootstrap.cfg`, the
+  one-time seed config imported into each new phone's web UI (provisioning
+  server + Basic Auth + Update Mode). The rendered file holds the Worker's
+  Basic Auth credentials (gitignored via `*.cfg`). FlashMode/FlashProtocol
+  enum values still need verifying against a hand-configured phone's export.
 - `common.xml` — shared Fanvil config pushed to every phone.
 - `phoneclub.env` — environment variables (gitignored; never read into context).
 - `default_user_config.xml-2.cfg` / `-4.cfg` — raw phone exports from two

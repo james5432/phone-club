@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ================================================================== -->
+<!-- VOIP PHONE CLUB - BOOTSTRAP TEMPLATE (rendered by make_bootstrap)  -->
+<!-- The one-time "seed" config imported into each NEW handset's web    -->
+<!-- UI (System > Configuration > Import) so it knows where the         -->
+<!-- provisioning server is. After import + reboot the phone fetches    -->
+<!-- common.xml and its own <mac>.cfg and configures itself fully.      -->
+<!-- Tokens (see make_bootstrap.py): PROV_SERVER_URL, PROV_HTTP_USER,   -->
+<!-- PROV_HTTP_PASS. A RENDERED copy contains the provisioning server's -->
+<!-- Basic Auth credentials - bootstrap.cfg is gitignored, keep it so.  -->
+<!--                                                                    -->
+<!-- TODO: verify FlashMode / FlashProtocol enum values against one     -->
+<!-- hand-configured phone's export before trusting this at scale:      -->
+<!--   FlashMode 2      = believed "Update at Time Interval"            -->
+<!--   FlashProtocol 4  = believed HTTPS                                -->
+<!-- If a bootstrapped phone never provisions, these two are the        -->
+<!-- prime suspects.                                                    -->
+<!-- ================================================================== -->
+<sysConf>
+    <Version>2.0000000000</Version>
+    <ap>
+        <DefaultUsername>{{PROV_HTTP_USER}}</DefaultUsername>
+        <DefaultPassword>{{PROV_HTTP_PASS}}</DefaultPassword>
+        <DownloadCommonConf>1</DownloadCommonConf>
+        <FlashServerIP>{{PROV_SERVER_URL}}</FlashServerIP>
+        <FlashFileName></FlashFileName>
+        <FlashProtocol>4</FlashProtocol>
+        <FlashMode>2</FlashMode>
+        <FlashInterval>1</FlashInterval>
+    </ap>
+</sysConf>
