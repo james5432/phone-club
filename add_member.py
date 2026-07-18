@@ -64,8 +64,18 @@ def die(msg):
 
 
 # --- VoIP.ms API --------------------------------------------------------------
-def voipms(method, **params):
-    """Call a VoIP.ms REST method and return the parsed JSON, raising on failure."""
+class VoipmsTimeout(RuntimeError):
+    """A VoIP.ms call timed out. The request may still have been processed
+    server-side - callers that create things should re-check before failing."""
+
+
+def voipms(method, timeout=30, **params):
+    """Call a VoIP.ms REST method and return the parsed JSON, raising on failure.
+
+    Write calls should pass a longer `timeout`: VoIP.ms is sometimes slow to
+    answer creates/updates even when they succeed (observed 2026-07: a
+    createSubAccount took >30s to answer but was processed).
+    """
     query = {
         "api_username": VOIPMS_API_USER,
         "api_password": VOIPMS_API_PASS,
@@ -77,7 +87,12 @@ def voipms(method, **params):
     # form-POST bodies (verified 2026-07). Credentials ride the query string;
     # TLS covers them in transit.
     try:
-        resp = requests.get(VOIPMS_API_URL, params=query, timeout=30)
+        resp = requests.get(VOIPMS_API_URL, params=query, timeout=timeout)
+    except requests.exceptions.Timeout as e:
+        # distinct type so callers can tell "gave up waiting" (request may
+        # still have landed) from a hard network failure
+        raise VoipmsTimeout(f"VoIP.ms {method}: {type(e).__name__} "
+                            f"(network problem)") from None
     except requests.exceptions.RequestException as e:
         # sanitize: requests exceptions can embed the full request URL,
         # query-string credentials included
@@ -93,10 +108,24 @@ def voipms(method, **params):
     return data
 
 
-def used_extensions():
+def get_subaccounts():
+    """Return the list of sub-account dicts from VoIP.ms."""
+    return voipms("getSubAccounts").get("accounts", [])
+
+
+def used_extensions(accounts=None):
     """Return the set of internal extensions already assigned to sub-accounts."""
-    data = voipms("getSubAccounts")
-    return {str(a.get("internal_extension", "")).strip() for a in data.get("accounts", [])}
+    if accounts is None:
+        accounts = get_subaccounts()
+    return {str(a.get("internal_extension", "")).strip() for a in accounts}
+
+
+def find_subaccount(accounts, sip_user):
+    """Return the sub-account dict whose full name matches sip_user, or None."""
+    for a in accounts:
+        if str(a.get("account", "")).lower() == sip_user.lower():
+            return a
+    return None
 
 
 def next_extension(used):
@@ -131,16 +160,15 @@ def make_password(length=16):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-def create_subaccount(name, extension, password):
+def _subaccount_params(name, extension, password):
     """
-    Create sub-account <account>_<name> with the given internal extension.
+    Field set shared by createSubAccount and setSubAccount.
 
-    NOTE: createSubAccount's required fields occasionally change. Before first real
-    run, cross-check this dict against https://voip.ms/m/apidocs.php and adjust.
+    NOTE: the required fields occasionally change. Before first real run,
+    cross-check this dict against https://voip.ms/m/apidocs.php and adjust.
     Run with --dry-run first so nothing is created until you've confirmed it.
     """
-    params = {
-        "username":            name,          # becomes <account>_<name>
+    return {
         "password":            password,
         "auth_type":           "1",           # 1 = username/password
         "device_type":         "2",           # generic IP phone
@@ -157,8 +185,43 @@ def create_subaccount(name, extension, password):
         "dtmf_mode":           "AUTO",
         "nat":                 "yes",
     }
-    voipms("createSubAccount", **params)
-    return f"{VOIPMS_ACCOUNT}_{name}"
+
+
+def create_subaccount(name, extension, password):
+    """Create sub-account <account>_<name> with the given internal extension.
+
+    Recovers from a read timeout: VoIP.ms sometimes processes the create but
+    answers slowly, so on timeout we re-query before declaring failure.
+    """
+    sip_user = f"{VOIPMS_ACCOUNT}_{name}"
+    params = {"username": name, **_subaccount_params(name, extension, password)}
+    try:
+        voipms("createSubAccount", timeout=90, **params)
+    except VoipmsTimeout:
+        print("  createSubAccount timed out - checking whether the sub-account "
+              "was created anyway ...")
+        time.sleep(10)
+        if find_subaccount(get_subaccounts(), sip_user) is None:
+            raise
+        print(f"  createSubAccount timed out, but {sip_user} exists on "
+              f"VoIP.ms - continuing.")
+    return sip_user
+
+
+def reset_subaccount(existing, name, extension, password):
+    """Point an existing (orphaned) sub-account at this run's SIP password.
+
+    Used when an earlier run created the sub-account but died before uploading
+    the phone config: that run's password is lost (VoIP.ms never returns
+    passwords), so we set a fresh one to keep the rendered .cfg in sync.
+    Only call this after checking that no uploaded .cfg references the
+    sub-account (see cfg_referencing_user).
+    """
+    sub_id = existing.get("id")
+    if not sub_id:
+        die(f"cannot re-use {VOIPMS_ACCOUNT}_{name}: getSubAccounts returned no id")
+    voipms("setSubAccount", timeout=90, id=sub_id,
+           **_subaccount_params(name, extension, password))
 
 
 def registration_status(account):
@@ -212,6 +275,15 @@ def r2_client():
 
 def ensure_key_free(s3, key):
     """Die if <mac>.cfg already exists: provisioning only ever adds, never overwrites."""
+    # Guard against a misconfigured bucket name first: HeadObject returns 404
+    # for a MISSING BUCKET too, which would make the free-key check pass
+    # vacuously and the later upload fail after the sub-account was created
+    # (observed 2026-07-18 with a stale R2_BUCKET value).
+    try:
+        s3.head_bucket(Bucket=R2_BUCKET)
+    except ClientError:
+        die(f"R2 bucket '{R2_BUCKET}' not found or not accessible - "
+            f"check R2_BUCKET in phoneclub.env")
     try:
         s3.head_object(Bucket=R2_BUCKET, Key=key)
     except ClientError as e:
@@ -221,6 +293,25 @@ def ensure_key_free(s3, key):
     die(f"'{key}' already exists in bucket '{R2_BUCKET}'. Provisioning never "
         f"overwrites - if this handset is being re-issued, sort that out by hand "
         f"in the R2 dashboard first.")
+
+
+def cfg_referencing_user(s3, sip_user):
+    """Return the key of the first .cfg in the bucket mentioning sip_user, else None.
+
+    Guard for the sub-account re-use path: if any uploaded phone config
+    references the sub-account, it belongs to a (possibly working) handset and
+    we must not reset its password. Read-only.
+    """
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=R2_BUCKET):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if not key.endswith(".cfg"):
+                continue
+            body = s3.get_object(Bucket=R2_BUCKET, Key=key)["Body"].read()
+            if sip_user.encode() in body:
+                return key
+    return None
 
 
 def upload_to_r2(s3, key, cfg_text):
@@ -256,11 +347,26 @@ def main():
 
     name = validate_name(args.name)
     mac = normalise_mac(args.mac)
-
-    used = used_extensions()
-    ext = validate_extension(args.ext, used) if args.ext else next_extension(used)
-
     sip_user = f"{VOIPMS_ACCOUNT}_{name}"
+
+    accounts = get_subaccounts()
+    used = used_extensions(accounts)
+    existing = find_subaccount(accounts, sip_user)
+
+    if existing:
+        # Likely an orphan from an earlier run that died between creating the
+        # sub-account and uploading the config. Adopt its extension; whether
+        # it's safe to re-use is checked further down, before any writes.
+        ext = str(existing.get("internal_extension", "")).strip()
+        if not ext:
+            die(f"sub-account {sip_user} already exists but has no internal "
+                f"extension - fix it by hand in the VoIP.ms portal")
+        if args.ext and args.ext.strip() != ext:
+            die(f"sub-account {sip_user} already exists with extension {ext}; "
+                f"--ext {args.ext} conflicts - drop --ext to re-use it")
+    else:
+        ext = validate_extension(args.ext, used) if args.ext else next_extension(used)
+
     password = make_password()
 
     print(f"  name       : {name}")
@@ -268,6 +374,8 @@ def main():
     print(f"  extension  : {ext}")
     print(f"  sip user   : {sip_user}")
     print(f"  server     : {VOIPMS_SERVER}")
+    if existing:
+        print(f"  note       : sub-account already exists on VoIP.ms - will re-use it")
 
     # Render first: this validates the template BEFORE anything is created
     # remotely, so a failure here can't leave a half-provisioned handset.
@@ -282,8 +390,12 @@ def main():
         else:
             print("[dry-run] R2_* env vars not set, skipped checking whether "
                   f"'{key}' already exists.")
-        print(f"[dry-run] would create sub-account {sip_user} and upload {key}. "
-              "Nothing changed.")
+        if existing:
+            print(f"[dry-run] would re-use existing sub-account {sip_user} "
+                  f"(resetting its SIP password) and upload {key}. Nothing changed.")
+        else:
+            print(f"[dry-run] would create sub-account {sip_user} and upload {key}. "
+                  "Nothing changed.")
         return
 
     # Check the R2 key is free before creating the sub-account, so a re-used
@@ -291,8 +403,23 @@ def main():
     s3 = r2_client()
     ensure_key_free(s3, key)
 
-    print("\ncreating sub-account ...")
-    account = create_subaccount(name, ext, password)
+    if existing:
+        # Safe to re-use only if no uploaded phone config references the
+        # sub-account - otherwise it may belong to a working handset, and
+        # resetting its password would break that phone.
+        ref = cfg_referencing_user(s3, sip_user)
+        if ref:
+            die(f"sub-account {sip_user} already exists and '{ref}' in bucket "
+                f"'{R2_BUCKET}' references it - that looks like a live handset. "
+                f"Re-issuing a phone is a manual job, sort it out in the "
+                f"portals first.")
+        print(f"\nsub-account {sip_user} already exists (probably an earlier "
+              f"timed-out run) - re-using it and resetting its SIP password ...")
+        reset_subaccount(existing, name, ext, password)
+        account = sip_user
+    else:
+        print("\ncreating sub-account ...")
+        account = create_subaccount(name, ext, password)
 
     print("uploading config ...")
     upload_to_r2(s3, key, cfg)
