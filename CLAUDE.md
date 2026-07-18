@@ -13,6 +13,9 @@ admin. This repo holds the tooling to add a new handset end to end.
 - Dial plan: `^[12][0-9][0-9]$`.
 - Provisioning: Cloudflare R2 bucket + Worker (HTTP Basic Auth).
 - Config split: shared `common.xml` + one per-MAC `.cfg` (object key = `<mac>.cfg`).
+  H2U-V2 phones fetch the shared config as `F0V2UV200000.cfg`, so common.xml is
+  ALSO uploaded under that R2 key (see `upload_common_alias.py`); keep the two
+  in sync when common.xml changes.
 - Phones: Fanvil H2U-V2. "Update Mode" must be set to "Update at Time Interval"
   or auto-provisioning never fires.
 - `common.xml` holds quiet hours (DND 21:00–08:00), `UseVPN=0`, `AllowIPCall=0`,

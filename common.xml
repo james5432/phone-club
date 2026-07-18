@@ -4,6 +4,11 @@
 <!-- Host this as the Common configuration on the provisioning server. -->
 <!-- Contains NO secrets, so encryption is optional.                   -->
 <!--                                                                   -->
+<!-- IMPORTANT: H2U-V2 phones request this file as F0V2UV200000.cfg    -->
+<!-- (observed in Worker logs 2026-07-18), NOT as common.xml. Upload   -->
+<!-- it under that key with upload_common_alias.py; after editing this -->
+<!-- file, delete the old R2 object by hand and re-run that script.    -->
+<!--                                                                   -->
 <!-- Edits vs a member's known-good export:                                   -->
 <!--   * AllowIPCall 1 -> 0  (children cannot dial raw IP addresses)   -->
 <!--   * Dial plan ^1[0-9][0-9]$ -> ^[12][0-9][0-9]$ (covers ext 200)  -->
