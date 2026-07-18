@@ -207,13 +207,13 @@ PAGE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Phone Club provisioning</title>
+<title>Babbel en Bel Admin</title>
 <style>
   :root { --accent:#2563eb; --ok:#16a34a; --bad:#dc2626; --muted:#6b7280; }
   * { box-sizing:border-box; }
   body { font-family:-apple-system,system-ui,sans-serif; margin:0; background:#f3f4f6; color:#111827; }
-  header { background:#1e293b; color:#fff; padding:14px 22px; font-size:18px; font-weight:600; }
-  header small { font-weight:400; color:#94a3b8; margin-left:10px; }
+  header { background:#F94892; color:#fff; padding:14px 22px; font-size:18px; font-weight:600; }
+  header small { font-weight:400; color:rgba(255,255,255,.85); margin-left:10px; }
   main { max-width:840px; margin:22px auto 60px; padding:0 16px; display:grid; gap:16px; }
   .card { background:#fff; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow-x:auto; }
   .card h2 { margin:0 0 12px; font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
@@ -252,7 +252,7 @@ PAGE = r"""<!doctype html>
 </style>
 </head>
 <body>
-<header>&#128222; Phone Club <small>handset provisioning</small></header>
+<header>&#128222; Babbel en Bel Admin <small>handset provisioning</small></header>
 <main>
 
   <div class="card">
