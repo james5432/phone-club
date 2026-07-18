@@ -66,7 +66,8 @@ Never read, print, commit, or paste these values.
   one-time seed config imported into each new phone's web UI (provisioning
   server + Basic Auth + Update Mode). The rendered file holds the Worker's
   Basic Auth credentials (gitignored via `*.cfg`). FlashMode/FlashProtocol
-  enum values still need verifying against a hand-configured phone's export.
+  enums verified 2026-07-18 against a working phone's export
+  (FlashProtocol 5 = HTTPS, FlashMode 2 = Update at Time Interval).
 - `common.xml` — shared Fanvil config pushed to every phone.
 - `phoneclub.env` — environment variables (gitignored; never read into context).
 - `default_user_config.xml-2.cfg` / `-4.cfg` — raw phone exports from two

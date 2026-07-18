@@ -9,18 +9,11 @@
 <!-- PROV_HTTP_PASS. A RENDERED copy contains the provisioning server's -->
 <!-- Basic Auth credentials - bootstrap.cfg is gitignored, keep it so.  -->
 <!--                                                                    -->
-<!-- TODO: verify FlashMode / FlashProtocol enum values against one     -->
-<!-- hand-configured phone's export before trusting this at scale:      -->
-<!--   FlashMode 2      = believed "Update at Time Interval"            -->
-<!--   FlashProtocol 4  = believed HTTPS                                -->
-<!-- If a bootstrapped phone never provisions, these two are the        -->
-<!-- prime suspects.                                                    -->
-<!--                                                                    -->
-<!-- OBSERVED 2026-07-18: a phone imported with FlashProtocol 4 showed  -->
-<!-- Protocol Type "HTTP" in its web UI (Auto Provision > Static        -->
-<!-- Provisioning Server), so 4 is NOT HTTPS on H2U-V2 firmware. Fix:   -->
-<!-- set the dropdown to HTTPS by hand, Apply, then export the config   -->
-<!-- and read back the real FlashProtocol number - and update it here.  -->
+<!-- Enum values VERIFIED 2026-07-18 against a working H2U-V2's export  -->
+<!-- (a phone whose web UI showed Protocol Type HTTPS + Update at Time  -->
+<!-- Interval):                                                         -->
+<!--   FlashProtocol 5 = HTTPS   (4 renders as HTTP - do not use)       -->
+<!--   FlashMode 2     = "Update at Time Interval"                      -->
 <!-- ================================================================== -->
 <sysConf>
     <Version>2.0000000000</Version>
@@ -30,7 +23,7 @@
         <DownloadCommonConf>1</DownloadCommonConf>
         <FlashServerIP>{{PROV_SERVER_URL}}</FlashServerIP>
         <FlashFileName></FlashFileName>
-        <FlashProtocol>4</FlashProtocol>
+        <FlashProtocol>5</FlashProtocol>
         <FlashMode>2</FlashMode>
         <FlashInterval>1</FlashInterval>
     </ap>
