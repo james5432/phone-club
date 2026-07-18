@@ -15,6 +15,12 @@
 <!--   FlashProtocol 4  = believed HTTPS                                -->
 <!-- If a bootstrapped phone never provisions, these two are the        -->
 <!-- prime suspects.                                                    -->
+<!--                                                                    -->
+<!-- OBSERVED 2026-07-18: a phone imported with FlashProtocol 4 showed  -->
+<!-- Protocol Type "HTTP" in its web UI (Auto Provision > Static        -->
+<!-- Provisioning Server), so 4 is NOT HTTPS on H2U-V2 firmware. Fix:   -->
+<!-- set the dropdown to HTTPS by hand, Apply, then export the config   -->
+<!-- and read back the real FlashProtocol number - and update it here.  -->
 <!-- ================================================================== -->
 <sysConf>
     <Version>2.0000000000</Version>
