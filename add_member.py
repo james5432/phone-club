@@ -40,7 +40,13 @@ from botocore.exceptions import ClientError
 
 # --- fixed project settings ---------------------------------------------------
 VOIPMS_API_URL = "https://voip.ms/api/v1/rest.php"
-EXT_POOL       = [str(n) for n in range(101, 200)]   # child extensions
+# Never assign these: live public short codes (112 emergency, 113 suicide
+# prevention, 144 animal ambulance), the EU-reserved 116 helpline prefix,
+# 110 (German police) and 111 as a 112 near-miss. The dial plan sends after
+# three digits, so any of these would ring a child's phone if assigned.
+RESERVED_EXTS  = {"110", "111", "112", "113", "116", "144"}
+EXT_POOL       = [str(n) for n in range(101, 200)
+                  if str(n) not in RESERVED_EXTS]    # child extensions
 REG_TIMEOUT_S  = 150                                 # how long to wait for registration
 
 # --- instance settings + secrets from environment -----------------------------
@@ -150,6 +156,9 @@ def validate_extension(raw, used):
     ext = raw.strip()
     if not re.fullmatch(r"[12][0-9][0-9]", ext):
         die(f"extension must match the dial plan (101-299), got: {raw!r}")
+    if ext in RESERVED_EXTS:
+        die(f"extension {ext} is reserved (public emergency/helpline short "
+            f"code) and must never be assigned")
     if ext in used:
         die(f"extension {ext} is already assigned to a sub-account")
     return ext
