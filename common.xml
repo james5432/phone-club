@@ -9,6 +9,11 @@
 <!-- it under that key with upload_common_alias.py; after editing this -->
 <!-- file, delete the old R2 object by hand and re-run that script.    -->
 <!--                                                                   -->
+<!-- IMPORTANT: bump <Version> on EVERY edit - phones only apply a     -->
+<!-- fetched config whose Version is higher than the one they last     -->
+<!-- applied (learned 2026-07-19 when a version-less DST edit was      -->
+<!-- silently ignored by the whole fleet).                             -->
+<!--                                                                   -->
 <!-- Edits vs a member's known-good export:                                   -->
 <!--   * AllowIPCall 1 -> 0  (children cannot dial raw IP addresses)   -->
 <!--   * Dial plan ^1[0-9][0-9]$ -> ^[12][0-9][0-9]$ (covers ext 200)  -->
@@ -20,7 +25,7 @@
 <!-- Everything else is that export's call behaviour, unchanged.   -->
 <!-- ================================================================= -->
 <sysConf>
-    <Version>2.0000000000</Version>
+    <Version>3.0000000000</Version>
     <sip>
         <line index="1">
             <UseVPN>0</UseVPN>
@@ -36,8 +41,13 @@
             <EnablePreDPlan>0</EnablePreDPlan>
             <IPDialPrefix>.</IPDialPrefix>
             <EnableDND>1</EnableDND>
-            <DNDMode>0</DNDMode>
-            <EnableSpaceDND>0</EnableSpaceDND>
+            <!-- DND enums verified by live test 2026-07-19: DNDMode 1 is a
+                 live mode (0 appears to be 'close'/off - phones never
+                 rejected with it), EnableSpaceDND is the DND *timer* switch.
+                 With these values a call in the window gets busy (480), and
+                 outside the window rings normally. -->
+            <DNDMode>1</DNDMode>
+            <EnableSpaceDND>1</EnableSpaceDND>
             <DNDStartTime>2100</DNDStartTime>
             <DNDEndTime>0800</DNDEndTime>
             <DNDAcceptMcast>0</DNDAcceptMcast>
