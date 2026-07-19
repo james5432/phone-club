@@ -14,9 +14,9 @@
 <!--   * Dial plan ^1[0-9][0-9]$ -> ^[12][0-9][0-9]$ (covers ext 200)  -->
 <!--   * DND window 1500-1730 -> 2100-0800 (quiet hours 21:00-08:00)   -->
 <!--   * Added <sip> UseVPN=0, <phone><date> UTC+1 + SNTP, EnableVPN=0 -->
-<!--     (export had UTC+8, so DND fired at the wrong wall-clock time; -->
-<!--      TimeZone 4 = UTC+1 inferred from 32 = UTC+8, i.e. quarter-   -->
-<!--      hour steps - VERIFY the clock on one handset after pushing)  -->
+<!--     (TimeZone 4 = UTC+1 VERIFIED against a handset 2026-07-19)    -->
+<!--   * Added EU DST rules (verified same day): without them phones   -->
+<!--     run winter time all summer and DND fires an hour late         -->
 <!-- Everything else is that export's call behaviour, unchanged.   -->
 <!-- ================================================================= -->
 <sysConf>
@@ -198,6 +198,24 @@
             <SecondSNTPServer>time.nist.gov</SecondSNTPServer>
             <TimeZone>4</TimeZone>
             <TimeZoneName>UTC+1</TimeZoneName>
+            <!-- EU daylight saving (last Su of Mar -> last Su of Oct, +60min).
+                 Without this the phones sit on winter time all summer and the
+                 21:00 DND fires at 22:00 real time. Values copied verbatim
+                 2026-07-19 from a handset configured via the web UI
+                 (Location Netherlands(Amsterdam), DST Automatic) and verified
+                 to show the correct clock. -->
+            <DSTType>1</DSTType>
+            <DSTLocation>16</DSTLocation>
+            <DSTRuleMode>0</DSTRuleMode>
+            <DSTMinOffset>60</DSTMinOffset>
+            <DSTStartMon>3</DSTStartMon>
+            <DSTStartWeek>5</DSTStartWeek>
+            <DSTStartWday>0</DSTStartWday>
+            <DSTStartHour>2</DSTStartHour>
+            <DSTEndMon>10</DSTEndMon>
+            <DSTEndWeek>5</DSTEndWeek>
+            <DSTEndWday>0</DSTEndWday>
+            <DSTEndHour>2</DSTEndHour>
         </date>
     </phone>
     <vpn>

@@ -20,7 +20,9 @@ import sys
 import boto3
 from botocore.exceptions import ClientError
 
-FANVIL_COMMON_KEY = "F0V2UV200000.cfg"
+# The shared config lives under BOTH keys: phones fetch the Fanvil name,
+# common.xml is kept in sync for humans reading the bucket.
+KEYS = ["F0V2UV200000.cfg", "common.xml"]
 COMMON_XML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "common.xml")
 
 
@@ -37,19 +39,19 @@ def main():
 
     s3 = boto3.client("s3", endpoint_url=endpoint, aws_access_key_id=access,
                       aws_secret_access_key=secret, region_name="auto")
-    try:
-        s3.head_object(Bucket=bucket, Key=FANVIL_COMMON_KEY)
-        raise SystemExit(f"error: '{FANVIL_COMMON_KEY}' already exists in "
-                         f"'{bucket}' - this tool never overwrites. If you are "
-                         f"updating common.xml, delete the old object by hand "
-                         f"in the R2 dashboard first.")
-    except ClientError as e:
-        if e.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey", "NotFound"):
-            raise
-
-    s3.put_object(Bucket=bucket, Key=FANVIL_COMMON_KEY, Body=body,
-                  ContentType="text/plain")
-    print(f"uploaded '{FANVIL_COMMON_KEY}' ({len(body)} bytes) to bucket '{bucket}'")
+    for key in KEYS:
+        try:
+            s3.head_object(Bucket=bucket, Key=key)
+            raise SystemExit(f"error: '{key}' already exists in '{bucket}' - "
+                             f"this tool never overwrites. If you are updating "
+                             f"common.xml, delete the old object(s) by hand in "
+                             f"the R2 dashboard first. Nothing was changed.")
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey", "NotFound"):
+                raise
+    for key in KEYS:
+        s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType="text/plain")
+        print(f"uploaded '{key}' ({len(body)} bytes) to bucket '{bucket}'")
     print("reboot a phone (or wait for its next poll) to pick it up")
 
 

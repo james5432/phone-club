@@ -189,6 +189,9 @@ def _subaccount_params(name, extension, password):
         "internal_ringtime":   "15",
         "lock_international":   "1",           # block international dialling
         "international_route":  "1",
+        "canada_routing":       "1",           # 1 = value routes; irrelevant for
+                                               # club-internal calls but setSubAccount
+                                               # rejects requests without it
         "music_on_hold":       "default",
         "allowed_codecs":      "ulaw;g722",
         "dtmf_mode":           "AUTO",
