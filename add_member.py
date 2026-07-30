@@ -6,7 +6,7 @@ add_member.py - provision one Phone Club handset end to end.
   python add_member.py --name Femke --mac 0C383E1A2B3C --dry-run
 
 Steps performed:
-  1. Find the next free extension in the kid pool (101-199).
+  1. Pick the next extension: one past the highest in use (kid pool 101-199).
   2. Generate a SIP password.
   3. Render the per-MAC .cfg from your template (validated before anything
      is created remotely) and check <mac>.cfg is not already in R2.
@@ -135,11 +135,22 @@ def find_subaccount(accounts, sip_user):
 
 
 def next_extension(used):
-    """Return the first extension in EXT_POOL not present in `used`."""
-    for ext in EXT_POOL:
-        if ext not in used:
+    """Return the extension after the highest one currently in use.
+
+    Allocation is monotonic on purpose: gaps below the high-water mark
+    (reserved short codes, forced jumps like the 120+ batch, retired
+    members) are never re-filled, so an extension keeps pointing at the
+    same child for the club's lifetime. Forcing a gap with --ext still
+    works when that's genuinely wanted.
+    """
+    highest = max((int(e) for e in used
+                   if e.isdigit() and 101 <= int(e) <= 199), default=100)
+    pool = set(EXT_POOL)
+    for n in range(highest + 1, 200):
+        ext = str(n)
+        if ext in pool and ext not in used:
             return ext
-    die("no free extensions left in the pool (101-199)")
+    die("no free extensions left after the highest in use (pool ends at 199)")
 
 
 def validate_name(raw):
