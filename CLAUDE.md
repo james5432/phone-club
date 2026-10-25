@@ -39,8 +39,9 @@ Never read, print, commit, or paste these values.
 
 ## How to add a handset
 
-1. Set up the environment once:
-   `python3 -m venv .venv && source .venv/bin/activate && pip install requests boto3`
+1. Set up the environment once (Python 3.13 from Homebrew; macOS's own 3.9
+   is too old for current boto3):
+   `python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt`
 2. Make sure `phone.cfg.template` exists — built from a known-good exported `.cfg`
    with the five per-phone values replaced by `{{SIP_USER}}`, `{{SIP_PASS}}`,
    `{{SIP_SERVER}}`, `{{EXTENSION}}`, `{{MAC}}`.
@@ -70,7 +71,7 @@ Never read, print, commit, or paste these values.
 - `gui.py` — localhost web GUI wrapping add_member.py (run
   `source phoneclub.env && .venv/bin/python gui.py`, open
   http://127.0.0.1:8765). Provision button only arms after a clean dry run
-  of the same details; never shows SIP passwords; needs `pip install flask`.
+  of the same details; never shows SIP passwords.
 - `phone.cfg.template` — per-MAC template with the `{{...}}` tokens above.
 - `ht801.cfg.template` — same tokens, for the HT801 (rendered to `cfg<mac>.xml`).
   Includes pulse dialling (P20521), voice prompt off (P253) and TR-069 off
