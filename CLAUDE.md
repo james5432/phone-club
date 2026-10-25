@@ -23,9 +23,9 @@ admin. This repo holds the tooling to add a new handset end to end.
   template is self-contained — common.xml does not apply. No quiet hours (no
   scheduled DND on the HT801). Its config server password field takes at most
   40 chars, so the Worker accepts a second login (`PROV_USER_2`/`PROV_PASS_2`).
-  Seeded by hand in its web UI (Maintenance → Upgrade: Config File tab = HTTPS,
-  Worker host, second login; Provision tab = Automatic Upgrade periodic, DHCP
-  override off). "Can be called but can't call out" = check the handset's
+  Seeded with `python make_bootstrap.py --device ht801` (needs
+  `PROV_HTTP_USER_2`/`PROV_HTTP_PASS_2`): upload `ht801-bootstrap.xml` via
+  Maintenance → Upgrade → Config File ("Upload Configuration"), reboot. "Can be called but can't call out" = check the handset's
   pulse/tone switch first.
 - `common.xml` holds quiet hours (DND 21:00–08:00), `UseVPN=0`, `AllowIPCall=0`,
   timezone UTC+1.
@@ -77,6 +77,8 @@ Never read, print, commit, or paste these values.
   Includes pulse dialling (P20521), voice prompt off (P253) and TR-069 off
   (P1409).
   Dial plan `{ xxx }` (any 3 digits), matching the Fanvils' behaviour.
+- `ht801-bootstrap.xml.template` — HT801 seed (`make_bootstrap.py --device
+  ht801` → `ht801-bootstrap.xml`, gitignored, holds the second Worker login).
 - `bootstrap.cfg.template` + `make_bootstrap.py` — render `bootstrap.cfg`, the
   one-time seed config imported into each new phone's web UI (provisioning
   server + Basic Auth + Update Mode). The rendered file holds the Worker's

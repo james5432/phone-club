@@ -8,3 +8,4 @@ ht801-export*.xml
 HT801-config*.xml
 *.pcap
 *.pcapng
+ht801-bootstrap.xml

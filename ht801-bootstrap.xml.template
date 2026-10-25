@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Phone Club: one-time seed config for a factory-fresh Grandstream HT801 V2. -->
+<!-- Rendered by make_bootstrap.py (device ht801) to ht801-bootstrap.xml, which -->
+<!-- holds the Worker's Grandstream login: gitignored, keep it local.          -->
+<!--                                                                           -->
+<!-- Points the adapter at the provisioning Worker; everything else arrives    -->
+<!-- with its cfg<mac>.xml on the first check-in. Values read back from the    -->
+<!-- hand-configured unit (exports of 2026-10-25, before and after setup).     -->
+<!-- The config password (P1361) never appears in an export; it was verified  -->
+<!-- 2026-10-25 by importing over a deliberately wrong password.              -->
+<gs_provision version="1">
+	<config version="1">
+		<!-- Config: via HTTPS from the Worker, with the Grandstream login -->
+		<P212>2</P212>
+		<P237>{{PROV_HOST}}</P237>
+		<P1360>{{PROV_HTTP_USER}}</P1360>
+		<P1361>{{PROV_HTTP_PASS}}</P1361>
+
+		<!-- Firmware: also the Worker, with no login. The Worker refuses it
+		     (401) and holds no firmware anyway, so the box never updates
+		     itself unexpectedly. -->
+		<P192>{{PROV_HOST}}</P192>
+
+		<!-- Check in every 60 minutes; a router can't redirect provisioning -->
+		<P22296>1</P22296>
+		<P193>60</P193>
+		<P145>0</P145>
+	</config>
+</gs_provision>
