@@ -31,9 +31,11 @@
 		<!-- First codec PCMU (ulaw), allowed on every club sub-account -->
 		<P57>0</P57>
 
-		<!-- Dial plan: club extensions only, same as the Fanvils'
-		     ^[12][0-9][0-9]$ -->
-		<P4200>{ [12]xx }</P4200>
+		<!-- Dial plan: any three digits, sent on the third - the same as the
+		     Fanvils (DialFixedLength=3). The closed network is enforced by
+		     VoIP.ms: a 3-digit number that isn't a club extension fails.
+		     Star codes and # stay blocked (x matches digits only). -->
+		<P4200>{ xxx }</P4200>
 
 		<!-- Lock-down:
 		     P191 0 = local call features (star codes) off

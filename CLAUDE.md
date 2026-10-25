@@ -75,6 +75,7 @@ Never read, print, commit, or paste these values.
 - `ht801.cfg.template` — same tokens, for the HT801 (rendered to `cfg<mac>.xml`).
   Includes pulse dialling (P20521), voice prompt off (P253) and TR-069 off
   (P1409).
+  Dial plan `{ xxx }` (any 3 digits), matching the Fanvils' behaviour.
 - `bootstrap.cfg.template` + `make_bootstrap.py` — render `bootstrap.cfg`, the
   one-time seed config imported into each new phone's web UI (provisioning
   server + Basic Auth + Update Mode). The rendered file holds the Worker's
