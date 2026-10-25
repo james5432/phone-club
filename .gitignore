@@ -4,3 +4,7 @@ phoneclub.env
 __pycache__/
 *.cfg
 .claude/settings.local.json
+ht801-export*.xml
+HT801-config*.xml
+*.pcap
+*.pcapng

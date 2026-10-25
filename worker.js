@@ -8,6 +8,8 @@
 //   * R2 binding named           BUCKET     -> your provisioning bucket
 //   * Plain-text/secret variable  PROV_USER  -> Basic Auth username
 //   * Secret variable             PROV_PASS  -> Basic Auth password
+//   * Optional  PROV_USER_2 / PROV_PASS_2    -> second login for Grandstream
+//                                               adapters (password max 40 chars)
 //   * D1 binding named            DB         -> heartbeat log (phone-heartbeats)
 //
 // Auth here is a SECOND layer. The device .cfg files are also AES-encrypted
@@ -34,8 +36,15 @@ export default {
 
     // --- HTTP Basic Auth ---------------------------------------------------
     const provided = request.headers.get("Authorization") || "";
-    const expected = "Basic " + btoa(`${env.PROV_USER}:${env.PROV_PASS}`);
-    if (provided !== expected) {
+    const basic = (user, pass) => "Basic " + btoa(`${user}:${pass}`);
+    const accepted = [basic(env.PROV_USER, env.PROV_PASS)];
+    // Optional second login: the Grandstream HT801 V2 refuses a config server
+    // password longer than 40 characters, and the Fanvils' one can't be
+    // changed without re-seeding every deployed phone.
+    if (env.PROV_USER_2 && env.PROV_PASS_2) {
+      accepted.push(basic(env.PROV_USER_2, env.PROV_PASS_2));
+    }
+    if (!accepted.includes(provided)) {
       return new Response("Authentication required", {
         status: 401,
         headers: { "WWW-Authenticate": 'Basic realm="phone-club"' },
@@ -57,9 +66,10 @@ export default {
     // A fetch of <mac>.cfg or <mac>.boot identifies the phone; log it even if
     // the object doesn't exist (the request itself proves the phone is up).
     // waitUntil: logging never delays - and can never break - provisioning.
-    const m = key.match(/^([0-9a-f]{12})\.(cfg|boot)$/i);
+    // Grandstream adapters ask for cfg<mac>.xml instead.
+    const m = key.match(/^(?:([0-9a-f]{12})\.(?:cfg|boot)|cfg([0-9a-f]{12})\.xml)$/i);
     if (m && env.DB) {
-      ctx.waitUntil(logHeartbeat(env, m[1].toLowerCase()));
+      ctx.waitUntil(logHeartbeat(env, (m[1] || m[2]).toLowerCase()));
     }
 
     // --- Fetch from R2 -----------------------------------------------------

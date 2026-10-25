@@ -61,6 +61,16 @@ R2_ACCESS_KEY   = os.environ.get("R2_ACCESS_KEY_ID")
 R2_SECRET_KEY   = os.environ.get("R2_SECRET_ACCESS_KEY")
 R2_BUCKET       = os.environ.get("R2_BUCKET", "phone-club-prov")
 TEMPLATE_PATH   = os.environ.get("PHONE_CFG_TEMPLATE", "phone.cfg.template")
+HT801_TEMPLATE_PATH = os.environ.get("HT801_CFG_TEMPLATE", "ht801.cfg.template")
+
+# Per device type: which template to render, and the R2 key the device asks
+# the Worker for. Fanvil H2U-V2 phones fetch <mac>.cfg; Grandstream HT801 V2
+# adapters fetch cfg<mac>.xml first (their Config Provision Order list).
+DEVICES = {
+    "fanvil": {"template": TEMPLATE_PATH,       "key": "{mac}.cfg"},
+    "ht801":  {"template": HT801_TEMPLATE_PATH, "key": "cfg{mac}.xml"},
+}
+CONFIG_KEY_RE = re.compile(r"([0-9a-f]{12})\.cfg|cfg([0-9a-f]{12})\.xml")
 
 
 def die(msg):
@@ -259,9 +269,28 @@ def registration_status(account):
 
 
 # --- config rendering ---------------------------------------------------------
-def render_cfg(mac, sip_user, sip_pass, extension):
+def config_key(mac, device="fanvil"):
+    """R2 object key the given device type requests for this MAC."""
+    return DEVICES[device]["key"].format(mac=mac)
+
+
+def seed_hint(device):
+    """What to check on the handset when it doesn't pick up its config."""
+    if device == "ht801":
+        return ("that the adapter's Config File tab points at the Worker over "
+                "HTTPS with the Grandstream login, and Automatic Upgrade polls")
+    return "that Update Mode is 'Update at Time Interval'"
+
+
+def mac_from_key(key):
+    """MAC of a per-device config key (either naming scheme), else None."""
+    m = CONFIG_KEY_RE.fullmatch(key)
+    return (m.group(1) or m.group(2)) if m else None
+
+
+def render_cfg(mac, sip_user, sip_pass, extension, device="fanvil"):
     """
-    Fill the per-MAC config from your template.
+    Fill the per-MAC config from the device type's template.
 
     Build phone.cfg.template from a KNOWN-GOOD exported .cfg: take a working phone's
     config and replace the five values that differ per handset with these tokens:
@@ -272,11 +301,14 @@ def render_cfg(mac, sip_user, sip_pass, extension):
         {{MAC}}         -> the phone's MAC
     Everything shared (quiet hours, UseVPN=0, AllowIPCall=0, timezone) stays in
     common.xml, so this template only carries the account-specific line.
+    The HT801 template uses the same tokens but is self-contained (see its
+    header comment).
     """
-    if not os.path.exists(TEMPLATE_PATH):
-        die(f"template not found: {TEMPLATE_PATH} "
+    template_path = DEVICES[device]["template"]
+    if not os.path.exists(template_path):
+        die(f"template not found: {template_path} "
             f"(create it from a working .cfg, see render_cfg docstring)")
-    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+    with open(template_path, "r", encoding="utf-8") as f:
         template = f.read()
     return (template
             .replace("{{SIP_USER}}",   sip_user)
@@ -319,7 +351,7 @@ def ensure_key_free(s3, key):
 
 
 def cfg_referencing_user(s3, sip_user):
-    """Return the key of the first .cfg in the bucket mentioning sip_user, else None.
+    """Return the key of the first per-device config mentioning sip_user, else None.
 
     Guard for the sub-account re-use path: if any uploaded phone config
     references the sub-account, it belongs to a (possibly working) handset and
@@ -329,7 +361,7 @@ def cfg_referencing_user(s3, sip_user):
     for page in paginator.paginate(Bucket=R2_BUCKET):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            if not key.endswith(".cfg"):
+            if not mac_from_key(key):
                 continue
             body = s3.get_object(Bucket=R2_BUCKET, Key=key)["Body"].read()
             if sip_user.encode() in body:
@@ -358,6 +390,8 @@ def main():
     ap.add_argument("--name", required=True, help="child's name, e.g. Femke")
     ap.add_argument("--mac",  required=True, help="phone MAC (any separators)")
     ap.add_argument("--ext",  help="force a specific extension instead of auto-picking")
+    ap.add_argument("--device", choices=sorted(DEVICES), default="fanvil",
+                    help="handset type (default: fanvil)")
     ap.add_argument("--dry-run", action="store_true",
                     help="show what would happen without creating or uploading anything")
     args = ap.parse_args()
@@ -393,6 +427,7 @@ def main():
     password = make_password()
 
     print(f"  name       : {name}")
+    print(f"  device     : {args.device}")
     print(f"  mac        : {mac}")
     print(f"  extension  : {ext}")
     print(f"  sip user   : {sip_user}")
@@ -402,8 +437,8 @@ def main():
 
     # Render first: this validates the template BEFORE anything is created
     # remotely, so a failure here can't leave a half-provisioned handset.
-    cfg = render_cfg(mac, sip_user, password, ext)
-    key = f"{mac}.cfg"   # confirm this matches what your Worker/Fanvil requests
+    cfg = render_cfg(mac, sip_user, password, ext, args.device)
+    key = config_key(mac, args.device)
 
     if args.dry_run:
         print(f"\n[dry-run] template renders OK ({len(cfg)} bytes).")
@@ -458,8 +493,8 @@ def main():
         time.sleep(10)
 
     print(f"\n  not registered yet after {REG_TIMEOUT_S}s. The account and config are "
-          f"in place - check power/ethernet, or that Update Mode is 'Update at "
-          f"Time Interval'. It will pick up the config on its next poll.")
+          f"in place - check power/ethernet, or {seed_hint(args.device)}. "
+          f"It will pick up the config on its next poll.")
     print(f"  SIP password lives only in the uploaded {key} (not shown here).")
 
 

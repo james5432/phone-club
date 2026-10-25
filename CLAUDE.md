@@ -18,6 +18,15 @@ admin. This repo holds the tooling to add a new handset end to end.
   in sync when common.xml changes.
 - Phones: Fanvil H2U-V2. "Update Mode" must be set to "Update at Time Interval"
   or auto-provisioning never fires.
+- Analog adapters: Grandstream HT801 V2 (`--device ht801`). Fetches
+  `cfg<mac>.xml` (not `<mac>.cfg`) and stops at the first file found, so its
+  template is self-contained — common.xml does not apply. No quiet hours (no
+  scheduled DND on the HT801). Its config server password field takes at most
+  40 chars, so the Worker accepts a second login (`PROV_USER_2`/`PROV_PASS_2`).
+  Seeded by hand in its web UI (Maintenance → Upgrade: Config File tab = HTTPS,
+  Worker host, second login; Provision tab = Automatic Upgrade periodic, DHCP
+  override off). "Can be called but can't call out" = check the handset's
+  pulse/tone switch first.
 - `common.xml` holds quiet hours (DND 21:00–08:00), `UseVPN=0`, `AllowIPCall=0`,
   timezone UTC+1.
 
@@ -39,7 +48,8 @@ Never read, print, commit, or paste these values.
    needs PROV_* env vars) and import `bootstrap.cfg` via the phone's web UI
    (System → Configuration → Import), then reboot it. This sets the
    provisioning server, Basic Auth, and Update Mode in one go.
-4. Dry run first: `python add_member.py --name <Name> --mac <MAC> --dry-run`.
+4. Dry run first: `python add_member.py --name <Name> --mac <MAC> --dry-run`
+   (add `--device ht801` for a Grandstream adapter).
 5. Only after a clean dry run, run it for real (drop `--dry-run`).
 
 ## Rules — do NOT
@@ -62,6 +72,9 @@ Never read, print, commit, or paste these values.
   http://127.0.0.1:8765). Provision button only arms after a clean dry run
   of the same details; never shows SIP passwords; needs `pip install flask`.
 - `phone.cfg.template` — per-MAC template with the `{{...}}` tokens above.
+- `ht801.cfg.template` — same tokens, for the HT801 (rendered to `cfg<mac>.xml`).
+  Includes pulse dialling (P20521), voice prompt off (P253) and TR-069 off
+  (P1409).
 - `bootstrap.cfg.template` + `make_bootstrap.py` — render `bootstrap.cfg`, the
   one-time seed config imported into each new phone's web UI (provisioning
   server + Basic Auth + Update Mode). The rendered file holds the Worker's

@@ -48,8 +48,8 @@ def log(msg):
     job["log"].append(f"[{time.strftime('%H:%M:%S')}] {msg}")
 
 
-def token_for(name, mac, ext):
-    return hashlib.sha256(f"{name}|{mac}|{ext}".encode()).hexdigest()[:16]
+def token_for(name, mac, ext, device):
+    return hashlib.sha256(f"{name}|{mac}|{ext}|{device}".encode()).hexdigest()[:16]
 
 
 def env_flags():
@@ -58,6 +58,7 @@ def env_flags():
                        and am.VOIPMS_API_USER and am.VOIPMS_API_PASS),
         "r2": bool(am.R2_ENDPOINT and am.R2_ACCESS_KEY and am.R2_SECRET_KEY),
         "template": os.path.exists(am.TEMPLATE_PATH),
+        "ht801_template": os.path.exists(am.HT801_TEMPLATE_PATH),
     }
 
 
@@ -122,13 +123,13 @@ def _mac_owner_map():
     paginator = s3.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=am.R2_BUCKET):
         for obj in page.get("Contents", []):
-            m = re.fullmatch(r"([0-9a-f]{12})\.cfg", obj["Key"])
-            if not m or m.group(1) in _mac_owner_cache:
+            mac = am.mac_from_key(obj["Key"])
+            if not mac or mac in _mac_owner_cache:
                 continue
             body = s3.get_object(Bucket=am.R2_BUCKET, Key=obj["Key"])["Body"].read()
             hit = pat.search(body)
             if hit:
-                _mac_owner_cache[m.group(1)] = hit.group(0).decode()
+                _mac_owner_cache[mac] = hit.group(0).decode()
     return dict(_mac_owner_cache)
 
 
@@ -251,6 +252,9 @@ def api_dryrun():
     try:
         name = am.validate_name(p.get("name") or "")
         mac = am.normalise_mac(p.get("mac") or "")
+        device = p.get("device") or "fanvil"
+        if device not in am.DEVICES:
+            raise SystemExit(f"error: unknown device type {device!r}")
         members = get_members()
         used = {m["extension"] for m in members}
         ext_raw = (p.get("ext") or "").strip()
@@ -260,18 +264,18 @@ def api_dryrun():
             raise SystemExit(f"error: sub-account {sip_user} already exists")
 
         checks = [f"name and MAC valid, extension {ext} is free"]
-        cfg = am.render_cfg(mac, sip_user, "DRY-RUN-PLACEHOLDER", ext)
-        checks.append(f"template renders OK ({len(cfg)} bytes)")
-        key = f"{mac}.cfg"
+        cfg = am.render_cfg(mac, sip_user, "DRY-RUN-PLACEHOLDER", ext, device)
+        checks.append(f"{device} template renders OK ({len(cfg)} bytes)")
+        key = am.config_key(mac, device)
         if not env_flags()["r2"]:
             raise SystemExit("error: R2_* env vars not set")
         am.ensure_key_free(am.r2_client(), key)
         checks.append(f"'{key}' is free in bucket '{am.R2_BUCKET}'")
 
         with state_lock:
-            armed = {"token": token_for(name, mac, ext),
-                     "name": name, "mac": mac, "ext": ext}
-        return jsonify(ok=True, name=name, mac=mac, ext=ext, sip_user=sip_user,
+            armed = {"token": token_for(name, mac, ext, device),
+                     "name": name, "mac": mac, "ext": ext, "device": device}
+        return jsonify(ok=True, name=name, mac=mac, ext=ext, device=device, sip_user=sip_user,
                        key=key, checks=checks, token=armed["token"])
     except SystemExit as e:
         return jsonify(ok=False, error=str(e))
@@ -280,12 +284,12 @@ def api_dryrun():
 
 
 def run_provision(d):
-    name, mac, ext = d["name"], d["mac"], d["ext"]
+    name, mac, ext, device = d["name"], d["mac"], d["ext"], d["device"]
     sip_user = f"{am.VOIPMS_ACCOUNT}_{name}"
-    key = f"{mac}.cfg"
+    key = am.config_key(mac, device)
     try:
         password = am.make_password()
-        cfg = am.render_cfg(mac, sip_user, password, ext)
+        cfg = am.render_cfg(mac, sip_user, password, ext, device)
         s3 = am.r2_client()
         am.ensure_key_free(s3, key)
 
@@ -306,8 +310,8 @@ def run_provision(d):
             time.sleep(10)
             log(f"not registered yet ({max(0, int(deadline - time.time()))}s left) ...")
         log(f"not registered after {am.REG_TIMEOUT_S}s. The account and config are in "
-            f"place - check power/ethernet and that Update Mode is 'Update at Time "
-            f"Interval'. The phone will pick up the config on its next poll.")
+            f"place - check power/ethernet and {am.seed_hint(device)}. "
+            f"The phone will pick up the config on its next poll.")
         job["status"] = "uploaded_only"
     except SystemExit as e:
         log(str(e))
@@ -331,7 +335,7 @@ def api_provision():
         job["status"] = "running"
         job["log"] = []
         job["details"] = {"name": details["name"], "ext": details["ext"],
-                          "mac": details["mac"]}
+                          "mac": details["mac"], "device": details["device"]}
     threading.Thread(target=run_provision, args=(details,), daemon=True).start()
     return jsonify(ok=True)
 
@@ -390,9 +394,9 @@ PAGE = r"""<!doctype html>
   #golive ol { margin:0 0 12px 18px; padding:0; font-size:14px; line-height:1.7; }
   #announce { width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #c7d2fe; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; min-height:52px; }
   #copyBtn { margin-top:8px; }
-  form { display:grid; grid-template-columns:2fr 2fr 1fr; gap:12px; }
+  form { display:grid; grid-template-columns:2fr 2fr 1fr 1.5fr; gap:12px; }
   label { display:grid; gap:4px; font-size:13px; font-weight:600; color:#374151; min-width:0; }
-  input { padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; width:100%; min-width:0; }
+  input, select { padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; width:100%; min-width:0; }
   @media (max-width:700px) { form { grid-template-columns:1fr; } }
   input:focus { outline:2px solid var(--accent); border-color:transparent; }
   .buttons { grid-column:1/-1; display:flex; gap:10px; align-items:center; }
@@ -448,6 +452,12 @@ PAGE = r"""<!doctype html>
       <label>Extension
         <input id="ext" placeholder="auto" autocomplete="off">
       </label>
+      <label>Device
+        <select id="device">
+          <option value="fanvil">Fanvil H2U-V2</option>
+          <option value="ht801">Grandstream HT801</option>
+        </select>
+      </label>
       <div class="buttons">
         <button class="action" id="dryrunBtn">Dry run</button>
         <button class="action" id="provisionBtn" disabled>Provision</button>
@@ -480,7 +490,7 @@ function disarm() {
   $('provisionBtn').disabled = true;
   $('armHint').textContent = 'Provision unlocks after a clean dry run.';
 }
-['name','mac','ext'].forEach(id => $(id).addEventListener('input', disarm));
+['name','mac','ext','device'].forEach(id => $(id).addEventListener('input', disarm));
 
 async function loadState() {
   const s = await (await fetch('/api/state')).json();
@@ -488,6 +498,7 @@ async function loadState() {
     ['VoIP.ms credentials', s.env.voipms],
     ['R2 credentials', s.env.r2],
     ['phone.cfg.template', s.env.template],
+    ['ht801.cfg.template', s.env.ht801_template],
   ].map(([n, ok]) =>
     `<span class="chip ${ok ? 'ok' : 'bad'}">${n}: ${ok ? 'OK' : 'missing'}</span>`
   ).join('');
@@ -627,7 +638,8 @@ $('dryrunBtn').addEventListener('click', async () => {
   res.className = ''; res.style.display = 'block'; res.textContent = 'running checks ...';
   const r = await (await fetch('/api/dryrun', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name: $('name').value, mac: $('mac').value, ext: $('ext').value})
+    body: JSON.stringify({name: $('name').value, mac: $('mac').value, ext: $('ext').value,
+                          device: $('device').value})
   })).json();
   if (r.ok) {
     token = r.token;

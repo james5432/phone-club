@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Phone Club: per-device config for a Grandstream HT801 V2 analog adapter. -->
+<!-- Rendered by add_member.py (device ht801), uploaded as cfg<mac>.xml.       -->
+<!--                                                                           -->
+<!-- Self-contained: unlike the Fanvils (phone.cfg.template + common.xml) the  -->
+<!-- adapter stops at the first config file it finds, so shared settings live  -->
+<!-- here too. Any P-value not listed is left as the device already has it.    -->
+<!--                                                                           -->
+<!-- Every value below except the account tokens was read back from a unit    -->
+<!-- that was configured by hand and tested on calls (exports of 2026-10-07   -->
+<!-- and 2026-10-25). P253, P20521 and P1409 were identified by exporting     -->
+<!-- before and after toggling the setting in the web UI.                      -->
+<!-- No quiet hours: the HT801 has no scheduled do-not-disturb.                -->
+<!-- rendered for MAC {{MAC}} -->
+<gs_provision version="1">
+	<config version="1">
+		<!-- Account: active, server, user = auth ID = full sub-account -->
+		<P271>1</P271>
+		<P47>{{SIP_SERVER}}</P47>
+		<P35>{{SIP_USER}}</P35>
+		<P36>{{SIP_USER}}</P36>
+		<P34>{{SIP_PASS}}</P34>
+		<!-- Name: shown to the person being called -->
+		<P3>{{EXTENSION}}</P3>
+
+		<!-- Registration: register, expire 60 min, NAT keep-alive -->
+		<P31>1</P31>
+		<P32>60</P32>
+		<P52>2</P52>
+
+		<!-- First codec PCMU (ulaw), allowed on every club sub-account -->
+		<P57>0</P57>
+
+		<!-- Dial plan: club extensions only, same as the Fanvils'
+		     ^[12][0-9][0-9]$ -->
+		<P4200>{ [12]xx }</P4200>
+
+		<!-- Lock-down:
+		     P191 0 = local call features (star codes) off
+		     P91  1 = call waiting disabled
+		     P277 1 = direct IP calls disabled (Fanvil AllowIPCall=0)
+		     P88  1 = keypad config update locked -->
+		<P191>0</P191>
+		<P91>1</P91>
+		<P277>1</P277>
+		<P88>1</P88>
+
+		<!-- Voice prompt off: P253 1 = the *** handset menu is disabled -->
+		<P253>1</P253>
+
+		<!-- Pulse dialling accepted as well as tone, so a handset's pulse/tone
+		     switch can't break outgoing calls (cost a week of debugging in
+		     Oct 2026) -->
+		<P20521>1</P20521>
+
+		<!-- TR-069 remote management (Grandstream GDMS cloud) off: P1409 0.
+		     Enabled by default; would be a second way to change settings. -->
+		<P1409>0</P1409>
+
+		<!-- Clock: GMT+01:00 Paris/Brussels zone (handles summer time);
+		     a router can't override it via DHCP -->
+		<P64>TZO-1</P64>
+		<P143>0</P143>
+	</config>
+</gs_provision>
